@@ -15,34 +15,37 @@ LOGGER.setLevel(logging.DEBUG)
 
 
 
-### CONTROLLER = API ###
-# API Router
+### CONTROLLER ###
+# API Router（APIをデコレータで表現できるようにしつつ、バグ予防のためにAPIから受け取る値をチェックする）
 class Router:
     def __init__(self):
-        self.routes: dict[str, tuple[Callable, type[BaseModel]]] = {}
+        self.routes: dict[str, tuple[Callable, type[BaseModel] | None]] = {}
 
-    def route(self, path: str, model: type[BaseModel]) -> Any:
+    def route(self, path: str, model: type[BaseModel] | None = None) -> Any:
         def decorator(func: Callable):
             # パス、メソッド、関数、およびPydanticモデルを登録
             self.routes[path] = (func, model)
             return func
         return decorator
 
-    def call_route(self, path: str, json: dict[str, Any]) -> Any:
+    def call_route(self, path: str, json_param: dict[str, Any]) -> Any:
         route_info = self.routes.get(path)
         if route_info:
             route_func, model = route_info
-            # Pydanticモデルでデータをバリデーションおよびパース
-            try:
-                data = model(**json)
-                return route_func(data)
-            except ValueError as e:
-                return Response.bad_request(f"入力データのフォーマットがAPI\"{path}\"の仕様と整合しません。： {str(e)}")
+            # Pydanticを用いて入力をチェック
+            if model:
+                try:
+                    data = model(**json_param)
+                    return route_func(data)
+                except ValueError as e:
+                    return Response.bad_request(f"入力データのフォーマットがAPI\"{path}\"の仕様と整合しません。： {str(e)}")
+            else:
+                return route_func(json_param)
         else:
             return Response.bad_request(f"指定されたパス\"{path}\"が見つかりません。")
 APP = Router()
 
-# レスポンス
+# レスポンスを表すクラス
 @dataclass
 class Response:
     status_code: int
@@ -64,25 +67,34 @@ class Response:
         return (str(self.status_code), json.dumps(self.content, ensure_ascii = False))
 
 
-# サンプルAPI
+# 個別API
+
+# サンプル： パラメータのバリデーションあり
 class Message(BaseModel):
     message: str
     @field_validator('message', mode = 'before')
     @classmethod
     def convert_to_string(cls, v):
         return str(v)
-
 @APP.route("/log", Message)
 def log(message: Message):
-    LOGGER.info(message.message)
-    return Response.ok({"message": message.message})
+    response_message: str = f"/log: Recieved log message: {message.message}"
+    LOGGER.info(response_message)
+    return Response.ok({"message": response_message})
+
+# サンプル： パラメータのバリデーションなし
+@APP.route("/log_unsafe")
+def log_unsafe(message: dict[str, str]):
+    response_message: str = f"/log_unsafe: Recieved log message: {message["message"]}"
+    LOGGER.info(response_message)
+    return Response.ok({"message": response_message})
 
 
 # エンドポイント
 def api_endpoint(path: str, json_param: str) -> str:
     response: Response
     try:
-        data: Any = json.loads(json_param)
+        data: dict[str, Any] = json.loads(json_param)
         response = APP.call_route(path, data)
     except json.JSONDecodeError as e:
         LOGGER.fatal(f"JSONデコードエラー： {e}")

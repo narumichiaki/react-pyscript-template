@@ -1,4 +1,5 @@
 export {}
+import { z } from "https://esm.sh/zod@3.23.8"
 
 // Reactの中からPyScriptの関数を呼べるように、Python Interpreter (Pyodide)を取りだす
 import { hooks } from "https://pyscript.net/releases/2024.10.1/core.js"
@@ -7,7 +8,8 @@ hooks.main.onReady.add((wrap, element) => {
 })
 
 // api_endpointのwrapper - オブジェクトをstringifyして送り、返ってきたJSON stringをオブジェクトに展開して返す
-function _callAPI(path: string, json_param: Record<string, any>): Promise<Record<string, any>> {
+// 任意： response_schemaを入れることでレスポンスのチェックができる
+function _callAPI(path: string, json_param: Record<string, any>, response_schema?: z.ZodType<any, any, any>): Promise<Record<string, any>> {
     return new Promise((resolve, reject) => {
         try {
             const json_string = JSON.stringify(json_param)
@@ -17,9 +19,18 @@ function _callAPI(path: string, json_param: Record<string, any>): Promise<Record
             if (Number(status_code) !== 200) {
                 reject(new Error(`APIエラー(${status_code})： ${parsed_result["error"]}`))
             }
-            resolve(parsed_result)
+            if (response_schema) {
+                const validation_result = response_schema.parse(parsed_result)
+                resolve(validation_result)
+            } else {
+                resolve(parsed_result)
+            }
         } catch (error) {
-            reject(new Error(`APIの呼び出しに失敗しました。${error}`))
+            if (error instanceof z.ZodError) {
+                reject(new Error(`APIのレスポンスがSchemaに適合しません。${error}`))
+            } else {
+                reject(new Error(`APIの呼び出しに失敗しました。${error}`))
+            }
         }
     })
 }

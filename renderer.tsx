@@ -1,9 +1,21 @@
-import React, { JSX, StrictMode, useState } from "https://cdn.skypack.dev/react@17"
-import ReactDOM from "https://cdn.skypack.dev/react-dom@17"
+import React, { JSX, StrictMode, useState } from "https://esm.sh/react@17.0"
+import ReactDOM from "https://esm.sh/react-dom@17.0"
+import { z } from "https://esm.sh/zod@3.23.8"
 
 // バックエンドAPI
-type CallApiFunction = (url: string, json_param: Record<string, any>) => Promise<Record<string, any>>
+type CallApiFunction = (
+  path: string,
+  json_param: Record<string, any>,
+  response_schema?: z.ZodType<any, any, any>
+) => Promise<Record<string, any>>
 let callAPI: CallApiFunction
+
+// API Responce Validators (バグ予防のためにAPIから受け取る値をチェックする)
+// for "/log"
+const LogMessageSchema = z.object({
+  message: z.string()
+})
+
 
 function App(): JSX.Element {
   const [count, setCount] = useState<number>(0)
@@ -11,7 +23,16 @@ function App(): JSX.Element {
   const handleClick = React.useCallback(() => {
     setCount((prevCount) => {
       const newCount = prevCount + 1
-      callAPI("/log", { message: newCount }).catch(error => {
+      // レスポンスのバリデーションあり版
+      callAPI("/log", { message: newCount }, LogMessageSchema).then(response => {
+        console.info(`Response: ${response.message}`)
+      }).catch(error => {
+        console.error("ログの記録に失敗しました。", {error})
+      })
+      // レスポンスのバリデーションなし版
+      callAPI("/log_unsafe", { message: newCount }).then(response => {
+        console.info(`Response: ${response.message}`)
+      }).catch(error => {
         console.error("ログの記録に失敗しました。", {error})
       })
       return newCount
