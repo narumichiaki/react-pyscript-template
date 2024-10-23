@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" /> <!-- Sharepoint上でaspxとして動作させるために必要 -->
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./style.css" />
+    <title>React Frontend x PyScript Backend: Example</title>
+    <!-- PyScript -->
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.10.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.10.1/core.js"></script>
+    <!-- React -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script>
+        // Reactの記述にTypeScriptを使えるようにする
+        Babel.registerPreset('tsx', {
+            presets: [
+                [ Babel.availablePresets['typescript'], { allExtensions: true, isTSX: true } ]
+            ]
+        });
+    </script>
+    <!-- PyScriptバックエンド： window.api_endpoint(url: str, json_param: str) -> str を定義すること -->
+    <script type="py" src="./backend.py" config="./pyscript.toml"></script>
+    <!-- Reactフロントエンド： window.render(call_api: CallApiFunction) -> void を定義すること -->
+    <script type="text/babel" data-type="module" data-presets="tsx,react" src="./renderer.tsx"></script>
+    <!-- バックエンドとフロントエンドの両方がwindowに定義されるのを待って、renderを開始 -->
+    <script type="text/babel" data-type="module" data-presets="tsx" src="./main.tsx"></script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>
