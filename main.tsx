@@ -18,8 +18,8 @@ function _callAPI(path: string, json_param: Record<string, any>): Record<string,
     }
 }
 
-// フロントエンドとバックエンドのロードが完了するまで待つ (最大10秒)
-function waitForLoaded(timeout: number = 10000): Promise<void> {
+// フロントエンドとバックエンドのロードが完了するまで待つ (最大30秒)
+function waitForLoaded(timeout: number = 30000): Promise<void> {
     return new Promise((resolve, reject) => {
         const startTime = Date.now()
         const intervalId = setInterval(() => {
