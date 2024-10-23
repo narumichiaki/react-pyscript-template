@@ -33,4 +33,4 @@ Sharepoint環境に設置することもできます(後述)。
 
 ## Sharepoint上への設置
 本テンプレートは、[カスタムスクリプトが有効化されている](https://learn.microsoft.com/ja-jp/sharepoint/allow-or-prevent-custom-script)Sharepoint上に設置することができます。
-`index.html`の拡張子を`.aspx`に変更して、srcフォルダの中身をアップロードしてください。
+`index.html`の拡張子を`.aspx`に変更してアップロードしてください。
