@@ -2,7 +2,7 @@ import React, { JSX, StrictMode, useState } from "https://cdn.skypack.dev/react@
 import ReactDOM from "https://cdn.skypack.dev/react-dom@17"
 
 // バックエンドAPI
-type CallApiFunction = (url: string, json_param: Record<string, any>) => Record<string, any>
+type CallApiFunction = (url: string, json_param: Record<string, any>) => Promise<Record<string, any>>
 let callAPI: CallApiFunction
 
 function App(): JSX.Element {
@@ -11,7 +11,9 @@ function App(): JSX.Element {
   const handleClick = React.useCallback(() => {
     setCount((prevCount) => {
       const newCount = prevCount + 1
-      callAPI("/log", { message: newCount })
+      callAPI("/log", { message: newCount }).catch(error => {
+        console.error("ログの記録に失敗しました。", {error})
+      })
       return newCount
     })
   }, [])

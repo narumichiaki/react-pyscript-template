@@ -1,4 +1,5 @@
 from typing import Callable, Any
+from dataclasses import dataclass
 import sys
 import logging
 import js
@@ -27,16 +28,40 @@ class Router:
             return func
         return decorator
 
-    def call_route(self, path: str, json: dict) -> Any:
+    def call_route(self, path: str, json: dict[str, Any]) -> Any:
         route_info = self.routes.get(path)
         if route_info:
             route_func, model = route_info
             # Pydanticモデルでデータをバリデーションおよびパース
-            data = model(**json)
-            return route_func(data)
+            try:
+                data = model(**json)
+                return route_func(data)
+            except ValueError as e:
+                return Response.bad_request(f"入力データのフォーマットがAPI\"{path}\"の仕様と整合しません。： {str(e)}")
         else:
-            raise ValueError(f"Route {path} not found.")
+            return Response.bad_request(f"指定されたパス\"{path}\"が見つかりません。")
 APP = Router()
+
+# レスポンス
+@dataclass
+class Response:
+    status_code: int
+    content: dict[str, Any]
+
+    @classmethod
+    def ok(cls, content: dict[str, Any]):
+        return cls(200, content)
+    
+    @classmethod
+    def bad_request(cls, error_message: str):
+        return cls(400, { "error": "Bad Request. " + error_message })
+
+    @classmethod
+    def error(cls, error_message: str):
+        return cls(500, { "error": "Internal Server Error. " + error_message })
+
+    def to_return(self):
+        return (str(self.status_code), json.dumps(self.content, ensure_ascii = False))
 
 
 # サンプルAPI
@@ -50,14 +75,22 @@ class Message(BaseModel):
 @APP.route("/log", Message)
 def log(message: Message):
     LOGGER.info(message.message)
-    return {"message": message.message}
+    return Response.ok({"message": message.message})
 
 
 # エンドポイント
 def api_endpoint(path: str, json_param: str) -> str:
-    data: Any = json.loads(json_param)
-    response: dict = APP.call_route(path, data)
-    return json.dumps(response)
+    response: Response
+    try:
+        data: Any = json.loads(json_param)
+        response = APP.call_route(path, data)
+    except json.JSONDecodeError as e:
+        LOGGER.fatal(f"JSONデコードエラー： {e}")
+        response = Response.bad_request(f"無効なJSON形式です： {str(e)}")
+    except Exception as e:
+        LOGGER.fatal(f"予期せぬエラーが発生しました： {e}")
+        response = Response.error(str(e))
+    return response.to_return()
 
 # APIエンドポイントをwindowに登録(必須)
 js.window.api_endpoint = api_endpoint
