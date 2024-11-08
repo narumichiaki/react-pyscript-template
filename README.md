@@ -34,3 +34,5 @@ Sharepoint環境に設置することもできます(後述)。
 ## Sharepoint上への設置
 本テンプレートは、[カスタムスクリプトが有効化されている](https://learn.microsoft.com/ja-jp/sharepoint/allow-or-prevent-custom-script)Sharepoint上に設置することができます。
 `index.html`の拡張子を`.aspx`に変更してアップロードしてください。
+
+<font color="red">2024年11月中旬までに行われたSharepointのセキュリティ強化により、カスタムスクリプトの作成（aspxのアップロードを含む）は、管理者の事前許可を要するようになりました。</font>本テンプレートのアップロードにも管理者の事前許可が必要です。ただし、本テンプレートでは機能の変更に際して`index.aspx`を変更する必要がないので、一度アップロードしてしまえば、その後の更新は好きなように行うことができます。
